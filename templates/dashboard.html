@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ dashboard.title }} - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="dashboard-body">
+    <nav class="dashboard-nav">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="gradient-text">Research Dashboard</span>
+            </a>
+            <div class="nav-actions">
+                <button class="btn-secondary" onclick="window.print()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    Print
+                </button>
+                <a href="{{ url_for('export_dashboard', dashboard_id=dashboard_id) }}" class="btn-primary"
+                    target="_blank">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Export
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="dashboard-main layout-{{ dashboard.ui_theme.layout }}">
+        <div class="dashboard-container">
+            <header class="dashboard-header">
+                <h1 class="dashboard-title">{{ dashboard.title }}</h1>
+            </header>
+
+            <div class="sections-grid">
+                {% for section in dashboard.sections %}
+                <section class="dashboard-section" id="section-{{ section.id }}">
+                    <div class="section-header">
+                        <h2 class="section-title">{{ section.title }}</h2>
+                    </div>
+
+                    <div class="section-content">
+                        {{ section.content_html|safe }}
+                    </div>
+
+                    {% if section.chart %}
+                    <div class="chart-container">
+                        <canvas id="chart-{{ section.id }}"></canvas>
+                    </div>
+                    {% endif %}
+                </section>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Dashboard data
+        const dashboardData = {{ dashboard| tojson | safe }};
+
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', function () {
+            dashboardData.sections.forEach(section => {
+                if (section.chart) {
+                    const ctx = document.getElementById(`chart-${section.id}`);
+                    if (ctx) {
+                        new Chart(ctx, {
+                            type: section.chart.type,
+                            data: {
+                                labels: section.chart.labels,
+                                datasets: section.chart.datasets.map(dataset => ({
+                                    label: dataset.label,
+                                    data: dataset.data,
+                                    backgroundColor: dataset.color + '33',
+                                    borderColor: dataset.color,
+                                    borderWidth: 2,
+                                    tension: 0.4
+                                }))
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                plugins: {
+                                    legend: {
+                                        display: true,
+                                        position: 'top',
+                                        labels: {
+                                            font: {
+                                                family: 'Inter',
+                                                size: 12
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: section.chart.type !== 'pie' && section.chart.type !== 'doughnut' ? {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            color: 'rgba(0, 0, 0, 0.05)'
+                                        }
+                                    },
+                                    x: {
+                                        grid: {
+                                            display: false
+                                        }
+                                    }
+                                } : {}
+                            }
+                        });
+                    }
+                }
+            });
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+
+</html>
