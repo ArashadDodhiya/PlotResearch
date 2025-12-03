@@ -331,5 +331,46 @@ def export_pptx(dashboard_id):
         download_name=f'dashboard_{dashboard_id}.pptx'
     )
 
+
+
+# PDF Export Route (Optional - requires wkhtmltopdf)
+@app.route('/export/pdf/<dashboard_id>')
+def export_pdf(dashboard_id):
+    """Export dashboard as PDF (if supported)"""
+    try:
+        import pdfkit
+        
+        # Check for custom HTML first
+        html_path = os.path.join(app.config['DASHBOARD_FOLDER'], f"{dashboard_id}.html")
+        if os.path.exists(html_path):
+            with open(html_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+        else:
+            return "Dashboard not found", 404
+            
+        # Configure pdfkit
+        options = {
+            'page-size': 'A4',
+            'margin-top': '0.75in',
+            'margin-right': '0.75in',
+            'margin-bottom': '0.75in',
+            'margin-left': '0.75in',
+            'encoding': "UTF-8",
+            'no-outline': None
+        }
+        
+        pdf = pdfkit.from_string(html_content, False, options=options)
+        
+        return send_file(
+            BytesIO(pdf),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'dashboard_{dashboard_id}.pdf'
+        )
+    except ImportError:
+        return "PDF export not supported on this server (missing pdfkit)", 501
+    except Exception as e:
+        return f"PDF export failed: {str(e)}", 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
